@@ -25,8 +25,22 @@ class BrowserManager:
             else:
                 logger.info("No existing session found. Will require login.")
 
+            proxy_server = os.getenv("PROXY_SERVER")
+            proxy_username = os.getenv("PROXY_USERNAME")
+            proxy_password = os.getenv("PROXY_PASSWORD")
+            
+            proxy_config = None
+            if proxy_server:
+                proxy_config = {
+                    "server": proxy_server,
+                }
+                if proxy_username and proxy_password:
+                    proxy_config["username"] = proxy_username
+                    proxy_config["password"] = proxy_password
+
             self.browser = await self.playwright.chromium.launch(
                 headless=headless_env,
+                proxy=proxy_config,
                 args=[
                     "--start-maximized",
                     "--disable-blink-features=AutomationControlled",

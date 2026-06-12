@@ -20,7 +20,23 @@ class CVParser:
                 self.page = await self.context.new_page()
             else:
                 logger.info("Initializing background headless browser context for CV parsing...")
-                self.headless_browser = await self.playwright.chromium.launch(headless=True)
+                proxy_server = os.getenv("PROXY_SERVER")
+                proxy_username = os.getenv("PROXY_USERNAME")
+                proxy_password = os.getenv("PROXY_PASSWORD")
+                
+                proxy_config = None
+                if proxy_server:
+                    proxy_config = {
+                        "server": proxy_server,
+                    }
+                    if proxy_username and proxy_password:
+                        proxy_config["username"] = proxy_username
+                        proxy_config["password"] = proxy_password
+
+                self.headless_browser = await self.playwright.chromium.launch(
+                    headless=True,
+                    proxy=proxy_config
+                )
                 self.headless_context = await self.headless_browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
                 )

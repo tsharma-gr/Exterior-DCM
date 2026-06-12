@@ -62,8 +62,8 @@ class BrowserManager:
 
     async def _setup_page(self, page):
         try:
-            from playwright_stealth import stealth_async
-            await stealth_async(page)
+            from playwright_stealth import stealth
+            await stealth(page)
         except Exception as e:
             logger.error(f"Error applying stealth: {e}")
         page.on("download", self._handle_download)

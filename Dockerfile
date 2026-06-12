@@ -8,4 +8,4 @@ RUN playwright install chromium
 
 COPY . .
 
-CMD ["python", "main.py"]
+CMD ["xvfb-run", "python", "main.py"]

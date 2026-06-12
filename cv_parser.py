@@ -33,8 +33,9 @@ class CVParser:
                         proxy_config["username"] = proxy_username
                         proxy_config["password"] = proxy_password
 
+                headless_env = os.getenv("HEADLESS", "true").lower() == "true"
                 self.headless_browser = await self.playwright.chromium.launch(
-                    headless=True,
+                    headless=headless_env,
                     proxy=proxy_config
                 )
                 self.headless_context = await self.headless_browser.new_context(

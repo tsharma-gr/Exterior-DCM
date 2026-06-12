@@ -26,7 +26,6 @@ class BrowserManager:
 
             self.browser = await self.playwright.chromium.launch(
                 headless=headless_env,
-                channel="chrome",
                 args=[
                     "--start-maximized",
                     "--disable-blink-features=AutomationControlled",

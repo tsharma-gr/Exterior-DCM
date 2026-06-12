@@ -20,7 +20,7 @@ class CVParser:
                 self.page = await self.context.new_page()
             else:
                 logger.info("Initializing background headless browser context for CV parsing...")
-                self.headless_browser = await self.playwright.chromium.launch(headless=True, channel="chrome")
+                self.headless_browser = await self.playwright.chromium.launch(headless=True)
                 self.headless_context = await self.headless_browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
                 )

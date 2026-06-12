@@ -8,4 +8,5 @@ RUN playwright install chromium
 
 COPY . .
 
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1920x1080x24", "python", "main.py"]
+RUN chmod +x start.sh
+CMD ["./start.sh"]

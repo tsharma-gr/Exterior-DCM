@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from browser_manager import BrowserManager
 from cv_library_searcher import CVLibrarySearcher
 from cv_parser import CVParser
-from criteria_loader import CriteriaLoader
 from ai_classifier import AIClassifier
 from supabase_writer import SupabaseWriter
 from processed_tracker import ProcessedTracker
@@ -29,7 +28,7 @@ BOOLEAN_KEYWORDS = (
     'AND (Design OR CAD OR Designer OR Draughtsmen OR draughtsman OR Estimator OR "Estimating Manager" OR "Estimating Director" OR "Pre Construction Director" OR "Pre-Construction Director" OR "Design Manager" OR "Design Director" OR "Drawing Office" OR Bid OR Bidding OR "Bidding Manager" OR "Bidding Director" OR QS OR "Quantity Surveyor" OR "Commercial Manager" OR "Commercial Director" OR Planner OR Buyer OR sales OR "business development" OR "BDM" OR "Project Manager" OR "Site Manager" OR "Contract Manager" OR "Contracts Manager" OR "Delivery Manager" OR "Project Director" OR "Site Director" OR "Contract Director" OR "Contracts Director" OR "Delivery Director" OR "Site Supervisor")'
 )
 
-async def automation_worker(searcher, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer, polling_interval, search_period):
+async def automation_worker(searcher, cv_parser, ai_mgr, tracker, supabase_writer, polling_interval, search_period):
     """The background task that performs the actual CV-Library search automation logic."""
     try:
         while True:
@@ -45,7 +44,7 @@ async def automation_worker(searcher, cv_parser, ai_mgr, tracker, criteria_text,
                 logger.info(f"{CYAN}Cycle Started: Running CV-Library Search ({search_period})...{RESET}")
                 
                 # Run direct search flow
-                work_done = await searcher.run_search_flow(BOOLEAN_KEYWORDS, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer, search_period)
+                work_done = await searcher.run_search_flow(BOOLEAN_KEYWORDS, cv_parser, ai_mgr, tracker, supabase_writer, search_period)
                 
                 if work_done:
                     logger.info(f"{GREEN}Search and processing completed. Checking again in 10 seconds...{RESET}")
@@ -69,7 +68,6 @@ async def run_automation():
     # Initialize components
     browser_mgr = BrowserManager()
     tracker = ProcessedTracker()
-    criteria_mgr = CriteriaLoader()
     ai_mgr = AIClassifier()
     supabase_writer = SupabaseWriter()
     
@@ -85,7 +83,6 @@ async def run_automation():
             return
             
         page = await browser_mgr.get_page()
-        criteria_text = criteria_mgr.load_criteria()
         searcher = CVLibrarySearcher(page, context)
         cv_parser = CVParser(context, browser_mgr.playwright)
         
@@ -97,7 +94,7 @@ async def run_automation():
             logger.info(f"{GREEN}AUTO_START=true detected. Starting production mode without terminal UI.{RESET}")
             # Await the worker directly so it runs indefinitely
             await automation_worker(
-                searcher, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer, polling_interval, search_period
+                searcher, cv_parser, ai_mgr, tracker, supabase_writer, polling_interval, search_period
             )
             return
             
@@ -154,7 +151,7 @@ async def run_automation():
                     
                     print(f"{GREEN}(+) Starting search automation worker with period: {search_period}...{RESET}")
                     automation_task = asyncio.create_task(
-                        automation_worker(searcher, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer, polling_interval, search_period)
+                        automation_worker(searcher, cv_parser, ai_mgr, tracker, supabase_writer, polling_interval, search_period)
                     )
             
             elif choice == '2':
@@ -186,7 +183,7 @@ async def run_automation():
                         cv_text = await cv_parser.extract_cv_text(test_url)
                         if cv_text:
                             print(f"{YELLOW}(~) Extracted {len(cv_text)} characters. Running AI Classification...{RESET}")
-                            ai_result = ai_mgr.classify_candidate(cv_text, criteria_text)
+                            ai_result = ai_mgr.classify_candidate(cv_text)
                             
                             print(f"\n{BOLD}--- AI CLASSIFICATION RESULT ---{RESET}")
                             

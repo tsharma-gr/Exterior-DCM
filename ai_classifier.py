@@ -19,7 +19,7 @@ class AIClassifier:
         self.model = os.getenv("AI_MODEL", "gpt-4o-mini")   
         logger.info(f"AI Classifier initialized using model: {self.model}")
 
-    def classify_candidate(self, cv_text, guide_json, expected_name="Unknown"):
+    def classify_candidate(self, cv_text, expected_name="Unknown"):
         logger.info(f"Starting Specialist Recruitment Screening for: {expected_name}...")
         
         system_prompt = f"""

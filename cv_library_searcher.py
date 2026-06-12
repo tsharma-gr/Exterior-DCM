@@ -12,12 +12,12 @@ class CVLibrarySearcher:
         self.search_url = "https://www.cv-library.co.uk/recruiter/candidate-search"
         self.session_manager = SessionManager(page, context)
 
-    async def run_search_flow(self, boolean_keywords, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer, search_period="24 hours"):
+    async def run_search_flow(self, boolean_keywords, cv_parser, ai_mgr, tracker, supabase_writer, search_period="24 hours"):
         """Performs search on CV-Library and processes all matching CVs."""
         current_url = self.page.url
         if "submit_cv_search" in current_url or "enc_keywords" in current_url:
             logger.info("Detected active search results page. Resuming processing from current view...")
-            work_done = await self.process_all_search_pages(cv_parser, ai_mgr, tracker, criteria_text, supabase_writer)
+            work_done = await self.process_all_search_pages(cv_parser, ai_mgr, tracker, supabase_writer)
             return work_done
 
         logger.info("Navigating to CV-Library Candidate Search...")
@@ -177,10 +177,10 @@ class CVLibrarySearcher:
             await asyncio.sleep(4)
 
         # Now start processing results
-        work_done = await self.process_all_search_pages(cv_parser, ai_mgr, tracker, criteria_text, supabase_writer)
+        work_done = await self.process_all_search_pages(cv_parser, ai_mgr, tracker, supabase_writer)
         return work_done
 
-    async def process_all_search_pages(self, cv_parser, ai_mgr, tracker, criteria_text, supabase_writer):
+    async def process_all_search_pages(self, cv_parser, ai_mgr, tracker, supabase_writer):
         """Iterates through search result pages and processes candidate CVs."""
         page_num = 1
         work_done = False
@@ -272,7 +272,7 @@ class CVLibrarySearcher:
                 if cv_text:
                     work_done = True
                     # Run AI Classifier
-                    ai_result = ai_mgr.classify_candidate(cv_text, criteria_text, expected_name=candidate["name"])
+                    ai_result = ai_mgr.classify_candidate(cv_text, expected_name=candidate["name"])
                     
                     if ai_result.get("classification") == "ERROR":
                         error_msg = ai_result.get("reasoning", "").lower()

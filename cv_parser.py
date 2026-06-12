@@ -26,8 +26,8 @@ class CVParser:
                 )
                 self.page = await self.headless_context.new_page()
                 try:
-                    from playwright_stealth import stealth
-                    await stealth(self.page)
+                    from playwright_stealth import Stealth
+                    await Stealth().apply_stealth_async(self.page)
                 except Exception as e:
                     logger.error(f"Error applying stealth in background parser: {e}")
             

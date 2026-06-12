@@ -25,6 +25,11 @@ class CVParser:
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
                 )
                 self.page = await self.headless_context.new_page()
+                try:
+                    from playwright_stealth import stealth_async
+                    await stealth_async(self.page)
+                except Exception as e:
+                    logger.error(f"Error applying stealth in background parser: {e}")
             
         logger.info(f"Loading CV in background: {cv_link}")
         

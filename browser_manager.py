@@ -48,10 +48,10 @@ class BrowserManager:
                 };
             """)
             
-            # Setup download handlers for all pages to fix the UUID bug
-            self.context.on("page", self._setup_page_downloads)
+            # Setup download handlers and stealth for all pages
+            self.context.on("page", lambda p: asyncio.create_task(self._setup_page(p)))
             for p in self.context.pages:
-                self._setup_page_downloads(p)
+                await self._setup_page(p)
                 
             logger.info("Successfully launched stealth browser.")
             return self.context
@@ -59,7 +59,12 @@ class BrowserManager:
             logger.error(f"Failed to launch browser: {e}")
             return None
 
-    def _setup_page_downloads(self, page):
+    async def _setup_page(self, page):
+        try:
+            from playwright_stealth import stealth_async
+            await stealth_async(page)
+        except Exception as e:
+            logger.error(f"Error applying stealth: {e}")
         page.on("download", self._handle_download)
 
     async def _handle_download(self, download):

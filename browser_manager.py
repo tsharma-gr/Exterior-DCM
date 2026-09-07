@@ -11,6 +11,7 @@ class BrowserManager:
         self.playwright = None
         self.context = None
         self.browser = None
+        self.is_remote = False
         self.storage_state_path = "storage_state.json"
 
     async def start(self):
@@ -19,11 +20,21 @@ class BrowserManager:
         self.playwright = await async_playwright().start()
         
         try:
-            storage_state = self.storage_state_path if os.path.exists(self.storage_state_path) else None
-            if storage_state:
-                logger.info("Loaded existing session.")
-            else:
-                logger.info("No existing session found. Will require login.")
+            try:
+                # Try to connect to an existing manual Chrome browser first
+                cdp_port = os.getenv("CDP_PORT", "9223")
+                self.is_remote = True
+                self.browser = await self.playwright.chromium.connect_over_cdp(f"http://localhost:{cdp_port}")
+                self.context = self.browser.contexts[0]
+                logger.info(f"Successfully connected to existing manual Chrome browser on port {cdp_port}.")
+                
+                # Setup download handlers
+                self.context.on("page", lambda p: asyncio.create_task(self._setup_page(p)))
+                for p in self.context.pages:
+                    await self._setup_page(p)
+                return self.context
+            except Exception:
+                logger.info("No existing browser found on port 9223. Launching headless fallback.")
 
             proxy_server = os.getenv("PROXY_SERVER")
             proxy_username = os.getenv("PROXY_USERNAME")
@@ -38,21 +49,28 @@ class BrowserManager:
                     proxy_config["username"] = proxy_username
                     proxy_config["password"] = proxy_password
 
+            # Use standard launch instead of persistent context or CDP
             self.browser = await self.playwright.chromium.launch(
                 headless=headless_env,
+                channel="chrome" if not headless_env else None, # Use default chromium in headless/VPS
                 proxy=proxy_config,
+                ignore_default_args=["--enable-automation"],
                 args=[
                     "--start-maximized",
                     "--disable-blink-features=AutomationControlled",
                     "--disable-infobars"
                 ]
             )
+
+            context_args = {
+                "no_viewport": True,
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            }
             
-            self.context = await self.browser.new_context(
-                storage_state=storage_state,
-                no_viewport=True,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            )
+            if os.path.exists(self.storage_state_path):
+                context_args["storage_state"] = self.storage_state_path
+
+            self.context = await self.browser.new_context(**context_args)
             
             # Prevent the site from instantly closing the tab, which was cancelling the downloads
             await self.context.add_init_script("""
@@ -102,15 +120,29 @@ class BrowserManager:
     async def get_page(self):
         if not self.context:
             await self.start()
-        
-        pages = self.context.pages
-        if pages:
-            return pages[0]
-        return await self.context.new_page()
+            
+        # ALWAYS create a new tab for each bot session to prevent simultaneous bots from fighting over the same tab
+        self.active_page = await self.context.new_page()
+        return self.active_page
 
     async def close(self):
+        if hasattr(self, 'active_page') and self.active_page:
+            try:
+                await self.active_page.close()
+            except Exception:
+                pass
         if self.context:
-            await self.context.close()
+            try:
+                if not getattr(self, 'is_remote', False):
+                    await self.context.close()
+            except Exception:
+                pass
+        if self.browser:
+            try:
+                if not getattr(self, 'is_remote', False):
+                    await self.browser.close()
+            except Exception:
+                pass
         if self.playwright:
             await self.playwright.stop()
         logger.info("Browser closed.")

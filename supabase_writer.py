@@ -1,4 +1,5 @@
 import os
+import re
 from supabase import create_client, Client
 from logger_config import logger
 from dotenv import load_dotenv
@@ -59,16 +60,38 @@ class SupabaseWriter:
             return None
 
         try:
+            sal = data.get("salary_range", None)
+            if isinstance(sal, str):
+                sal = re.sub(r'\s+to\s+', ' - ', sal, flags=re.I)
+                sal = re.sub(r'\s*(?:per\s+annum|per\s+year|p\.a\.|pa)\b', '', sal, flags=re.I)
+                sal = sal.strip()
+
+            name_val = data.get("name", "N/A")
+            title_val = data.get("job_title", "Unknown")
+            if name_val in ["Unknown", "N/A"] and title_val in ["Unknown", "N/A"]:
+                logger.info(f"Skipping Supabase insert: Candidate has both Unknown Name and Unknown Title.")
+                return None
+                
             row = {
-                "candidate_name": data.get("name", "N/A"),
+                "candidate_name": name_val,
                 "classification": data.get("classification", "N/A"),
                 "ai_reasoning": data.get("reasoning", "N/A"),
                 "current_position": data.get("current_position", "N/A"),
+                "job_title": data.get("job_title", "Unknown"),
+                "desired_role": data.get("desired_role", "Unknown"),
                 "location": data.get("location", "N/A"),
                 "cv_reference": data.get("cv_id", "N/A"),
                 "cv_link": data.get("cv_link", "N/A"),
                 "platform_name": data.get("platform_name", "N/A"),
-                "dcm_type": data.get("dcm_type", "Exterior")
+                "dcm_type": data.get("dcm_type", "Unknown"),
+                "email": data.get("email", None),
+                "phone_number": data.get("phone_number", None),
+                "linkedin_url": data.get("linkedin_url", None),
+                "salary_range": sal,
+                "t1_tenure": data.get("t1_tenure", None),
+                "t2_tenure": data.get("t2_tenure", None),
+                "business_specialization": data.get("business_specialization", None),
+                "current_company": data.get("current_company", "N/A"),
             }
 
             response = (
@@ -89,4 +112,35 @@ class SupabaseWriter:
             logger.error(
                 f"{RED}Error writing candidate to Supabase: {str(e)}{RESET}"
             )
+            return None
+
+    def update_bot_status(self, status: str):
+        """
+        Upsert the bot's current status into the bot_status table.
+        """
+        if not self.client:
+            return None
+            
+        dcm_type = os.getenv("DCM_TYPE", "Unknown")
+        
+        try:
+            from datetime import datetime, timezone
+            row = {
+                "dcm_type": dcm_type,
+                "status": status,
+                "last_updated": datetime.now(timezone.utc).isoformat()
+            }
+            
+            response = (
+                self.client
+                .table("bot_status")
+                .upsert(row)
+                .execute()
+            )
+            
+            logger.info(f"{GREEN}Successfully updated bot status to {status} for {dcm_type}.{RESET}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"{RED}Error updating bot status in Supabase: {str(e)}{RESET}")
             return None
